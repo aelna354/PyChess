@@ -33,9 +33,9 @@ class Chess(Frame):
 		PhotoImage(file="images/whitepawn.png"), PhotoImage(file="images/blackpawn.png"),
 		PhotoImage(file="images/whiterook.png"), PhotoImage(file="images/blackrook.png"),
 		PhotoImage(file="images/whiteknight.png"), PhotoImage(file="images/blackknight.png"),
-		PhotoImage(file="images/whitequeen.png"), PhotoImage(file="images/blackqueen.png"),
 		PhotoImage(file="images/whitebishop.png"), PhotoImage(file="images/blackbishop.png"),
-		PhotoImage(file="images/whitepawn.png"), PhotoImage(file="images/blackpawn.png"),
+		PhotoImage(file="images/whitequeen.png"), PhotoImage(file="images/blackqueen.png"),
+		PhotoImage(file="images/whiteking.png"), PhotoImage(file="images/blackking.png"),
 		]
 		#pawn
 		for i in range(0, 8):
@@ -47,6 +47,18 @@ class Chess(Frame):
 		self.tiles[0][7]['image'] = self.pieces[2]
 		self.tiles[7][0]['image'] = self.pieces[3]
 		self.tiles[7][7]['image'] = self.pieces[3]
+
+		#knight
+		self.tiles[0][1]['image'] = self.pieces[4]
+		self.tiles[0][6]['image'] = self.pieces[4]
+		self.tiles[7][1]['image'] = self.pieces[5]
+		self.tiles[7][6]['image'] = self.pieces[5]
+
+		#bishop
+		self.tiles[0][1]['image'] = self.pieces[4]
+		self.tiles[0][6]['image'] = self.pieces[4]
+		self.tiles[7][1]['image'] = self.pieces[4]
+		self.tiles[7][6]['image'] = self.pieces[4]
 
 	def click(self, index):
 		print(index)
