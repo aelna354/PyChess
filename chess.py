@@ -1,10 +1,5 @@
 from tkinter import *
-import webbrowser, time
-
-program = Tk()
-program.title("Chess Py")
-selectable = False
-selected = StringVar()
+import webbrowser
 
 class Piece():
 	def __init__(self, color, kind):
@@ -17,16 +12,20 @@ class Piece():
 			self.kind = self.kind + "prime"
 
 class Tile():
-	def __init__(self, row, col):
-		self.blank = {"grey": PhotoImage(file="images/greyblank.png"), "white": PhotoImage(file="images/whiteblank.png")}
+	def __init__(self, row, col, clickmethod):
+		self.blank = {}
+		for i in ["grey", "white", "orange"]:
+			self.blank[i] = PhotoImage(file="images/"+i+"blank.png")
 		self.row = row
 		self.col = col
+		self.pieceColor = None
 		if (row + col) % 2 == 0:
 			self.color = "white"
 		else:
 			self.color = "grey"
-		self.button = Button(command=self.click, bg=self.color)
+		self.button = Button(command=lambda:clickmethod(self.row, self.col), bg=self.color)
 		self.piece = None
+		self.highlighted = False
 		self.targets = {}
 		self.genTargets()
 
@@ -89,31 +88,37 @@ class Tile():
 
 	def clear(self):
 		self.piece = None
+		self.piececolor = None
 		self.button['image'] = self.blank[self.color]
 
 	def placePiece(self, newPiece):
 		self.piece = newPiece
-		self.button['image'] = self.piece.image
+		self.piececolor = newPiece.color
+		self.button['image'] = self.piece.image		
 
-	def click(self):
-		if selectable and (self.piece is not None):
-			selected.set(str(self.row) + str(self.column))
-		selectable = False
-		
+	def highlight(self):
+		if not self.highlighted:
+			self.highlighted = True
+			if self.piece is not None:
+				self.button['bg'] = 'orange'
+			else:
+				self.button['image'] = self.blank['orange']
+		else:
+			self.highlighted = False
+			if self.piece is not None:
+				self.button['image'] = self.piece.image
+			else:
+				self.button['bg'] = self.blank[self.color]
+
 class Chess(Frame):
 	def __init__(self, master):
-		self.master = master
-		board = Frame(master)
 		self.tiles = {}
-
 		for i in range(1, 9):
 			for j in range(1, 9):
-				self.tiles[(i, j)] = Tile(i, j)
+				self.tiles[(i, j)] = Tile(i, j, self.click) #reference to cal method
+				self.tiles[(i, j)].button.grid(row=i, column=j)
 
 		self.initBoard()
-		for key, val in self.tiles.items():
-			val.button.grid(row=key[0], column=key[1])
-
 		self.turn = IntVar()
 		self.turn.set(1)
 		self.currentturn = StringVar()
@@ -122,15 +127,10 @@ class Chess(Frame):
 		self.source = StringVar()
 		self.dest = StringVar()
 
-		Entry(textvariable=self.turncount, state='disabled').grid(row=9, column=1, columnspan=3)
-		self.button = Button(text="Start Game", bg="green", command=self.begin)
-		self.button.grid(row=9, column=4)
-		Entry(textvariable=self.currentturn, state='disabled').grid(row=9, column=5, columnspan=3)
+		self.startbutton = Button(text="Start Game", bg="green", command=self.begin)
+		self.startbutton.grid(row=9, column=4)
+		self.state = 1 #1 for not started, 2 for waiting for target piece, 3 for waiting for destination
 
-		Label(text="Source").grid(row=10, column=1, columnspan=2)
-		Entry(textvariable=self.source, state='disabled').grid(row=10, column=3, columnspan=2)
-		Label(text="Destination").grid(row=10, column=5, columnspan=2)
-		Entry(textvariable=self.dest, state='disabled').grid(row=10, column=7, columnspan=2)
 		hyperlink = Label(text="Source Code", fg="blue4", cursor="hand2")
 		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/blob/master/chess.py"))
 		hyperlink.grid(row=10,column=8, sticky=W)
@@ -157,22 +157,49 @@ class Chess(Frame):
 				self.tiles[i, j].clear()
 
 	def begin(self):
-		self.button.grid_remove()
-		self.turncount.set("Turn Count: 1")
+		self.startbutton.grid_remove()
+		Label(text="Turn Count: ").grid(row=9, column=1, sticky=W)
+		Label(textvariable=self.turn).grid(row=9,column=2, columnspan=3, sticky=W)
+		Label(textvariable=self.currentturn).grid(row=9, column=6, columnspan=3)
+		self.turncount.set("Turn Count: " + str(self.turn.get()))
 		self.currentturn.set("Current Turn: White")
-		self.state.set("Waiting for White to pick source...")
+		self.currentcolor = "white"
+		self.state = 2
+		self.highlighted = [] #list of possible destinations
+		self.source = None
 
-	def runTurn(self):
-			self.turncount.set("Turn Count: " + str(self.turn))
-			if turn % 2 == 0:
+	def click(self, r, c):
+		p = self.tiles[(r, c)]
+		if self.state == 2:
+			if p.piececolor != self.currentcolor:
+				return
+			for i in p.getTargets():
+				if self.tiles[i].piececolor != self.currentcolor:
+					self.highlighted.append(i)
+					self.tiles[i].highlight()
+			if len(self.highlighted) > 0:
+				self.state = 3
+				self.source = p
+		elif self.state == 3:
+			if not p.highlighted:
+				print("G")
+				return
+			p.placePiece(self.source.piece)
+			self.source.clear()
+			self.source = None
+			self.state = 2
+			self.turn.set(self.turn.get() + 1)
+			if self.currentcolor == "white":
+				self.currentcolor = "black"
 				self.currentturn.set("Current Turn: Black")
 			else:
+				self.currentcolor = "white"
 				self.currentturn.set("Current Turn: White")
-			selectable = True
-			self.wait()
-			finished = True
-			targets = self.tiles[(selected[0], selected[1])].getTargets()
-			print(targets)
+			for i in self.highlighted:
+				self.tiles[i].highlight()
+			self.highted = []
 
+program = Tk()
+program.title("Chess Py")
 app = Chess(program)
 program.mainloop()
