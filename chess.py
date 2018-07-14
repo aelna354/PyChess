@@ -94,7 +94,7 @@ class Tile():
 	def placePiece(self, newPiece):
 		self.piece = newPiece
 		self.piececolor = newPiece.color
-		self.button['image'] = self.piece.image		
+		self.button['image'] = self.piece.image
 
 	def highlight(self):
 		if not self.highlighted:
@@ -175,14 +175,13 @@ class Chess(Frame):
 				return
 			for i in p.getTargets():
 				if self.tiles[i].piececolor != self.currentcolor:
-					self.highlighted.append(i)
 					self.tiles[i].highlight()
+					self.highlighted.append(i)
 			if len(self.highlighted) > 0:
 				self.state = 3
 				self.source = p
 		elif self.state == 3:
 			if not p.highlighted:
-				print("G")
 				return
 			p.placePiece(self.source.piece)
 			self.source.clear()
