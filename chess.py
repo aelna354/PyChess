@@ -1,8 +1,10 @@
 from tkinter import *
 import webbrowser, time
 
+program = Tk()
+program.title("Chess Py")
 selectable = False
-selected = (None, None)
+selected = StringVar()
 
 class Piece():
 	def __init__(self, color, kind):
@@ -95,7 +97,7 @@ class Tile():
 
 	def click(self):
 		if selectable and (self.piece is not None):
-			selected = (self.row, self.column)
+			selected.set(str(self.row) + str(self.column))
 		selectable = False
 		
 class Chess(Frame):
@@ -111,17 +113,27 @@ class Chess(Frame):
 		self.initBoard()
 		for key, val in self.tiles.items():
 			val.button.grid(row=key[0], column=key[1])
-		self.turncount = StringVar()
-		self.currentturn = StringVar()
 
-		bottom = Frame(master)
-		Entry(bottom, textvariable=self.turncount, state='disabled').grid(row=0, column=1)
-		Button(bottom, text="Start Game", bg="green", command=self.begin).grid(row=0, column=2)
-		Entry(bottom, textvariable=self.currentturn, state='disabled').grid(row=0, column=3)
-		hyperlink = Label(bottom, text="Source Code", fg="blue4", cursor="hand2")
+		self.turn = IntVar()
+		self.turn.set(1)
+		self.currentturn = StringVar()
+		self.turncount = StringVar()
+		self.state = StringVar()
+		self.source = StringVar()
+		self.dest = StringVar()
+
+		Entry(textvariable=self.turncount, state='disabled').grid(row=9, column=1, columnspan=3)
+		self.button = Button(text="Start Game", bg="green", command=self.begin)
+		self.button.grid(row=9, column=4)
+		Entry(textvariable=self.currentturn, state='disabled').grid(row=9, column=5, columnspan=3)
+
+		Label(text="Source").grid(row=10, column=1, columnspan=2)
+		Entry(textvariable=self.source, state='disabled').grid(row=10, column=3, columnspan=2)
+		Label(text="Destination").grid(row=10, column=5, columnspan=2)
+		Entry(textvariable=self.dest, state='disabled').grid(row=10, column=7, columnspan=2)
+		hyperlink = Label(text="Source Code", fg="blue4", cursor="hand2")
 		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/blob/master/chess.py"))
-		hyperlink.grid(row=0,column=4, sticky=W)
-		bottom.grid(row=9, column=0, columnspan=8)
+		hyperlink.grid(row=10,column=8, sticky=W)
 
 	def initBoard(self):
 		for i in range(1, 9):
@@ -143,12 +155,15 @@ class Chess(Frame):
 		for i in [3, 4, 5, 6]:
 			for j in range(1, 9):
 				self.tiles[i, j].clear()
-	
+
 	def begin(self):
-		finished = False
-		turn = 1
-		while not finished:
-			self.turncount.set("Turn Count: " + str(turn))
+		self.button.grid_remove()
+		self.turncount.set("Turn Count: 1")
+		self.currentturn.set("Current Turn: White")
+		self.state.set("Waiting for White to pick source...")
+
+	def runTurn(self):
+			self.turncount.set("Turn Count: " + str(self.turn))
 			if turn % 2 == 0:
 				self.currentturn.set("Current Turn: Black")
 			else:
@@ -159,14 +174,5 @@ class Chess(Frame):
 			targets = self.tiles[(selected[0], selected[1])].getTargets()
 			print(targets)
 
-	def wait(self):
-		waiting = True
-		if (selected[0] is not None) and (selected[1] is not None):
-
-			self.master.after(1000, self.wait)
-
-
-program = Tk()
-program.title("Chess Py")
 app = Chess(program)
 program.mainloop()
