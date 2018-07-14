@@ -1,0 +1,1 @@
+START pythonw.exe chess.py
