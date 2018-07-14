@@ -1,4 +1,8 @@
 from tkinter import *
+import webbrowser, time
+
+selectable = False
+selected = (None, None)
 
 class Piece():
 	def __init__(self, color, kind):
@@ -11,21 +15,23 @@ class Piece():
 			self.kind = self.kind + "prime"
 
 class Tile():
-	def __init__(self, row, col, color):
+	def __init__(self, row, col):
 		self.blank = {"grey": PhotoImage(file="images/greyblank.png"), "white": PhotoImage(file="images/whiteblank.png")}
 		self.row = row
 		self.col = col
-		self.color = color
-		self.button = Button(command=self.click(), bg=color)
+		if (row + col) % 2 == 0:
+			self.color = "white"
+		else:
+			self.color = "grey"
+		self.button = Button(command=self.click, bg=self.color)
 		self.piece = None
+		self.targets = {}
 		self.genTargets()
 
 	def genTargets(self):
-		self.targets = {}
 		verticals = []
 		horizontals = []
 		diagonals = []
-
 		for i in range(1, 9):
 			if i != self.row:
 				verticals.append((i, self.col))
@@ -87,22 +93,35 @@ class Tile():
 		self.piece = newPiece
 		self.button['image'] = self.piece.image
 
-	def click(self, index):
-		print(self.getTargets())
-
+	def click(self):
+		if selectable and (self.piece is not None):
+			selected = (self.row, self.column)
+		selectable = False
+		
 class Chess(Frame):
 	def __init__(self, master):
+		self.master = master
 		board = Frame(master)
 		self.tiles = {}
+
 		for i in range(1, 9):
 			for j in range(1, 9):
-				if (i + j) % 2 == 0:
-					self.tiles[(i, j)] = Tile(i, j, "white")
-				else:
-					self.tiles[(i, j)] = Tile(i, j, "grey")
+				self.tiles[(i, j)] = Tile(i, j)
+
 		self.initBoard()
 		for key, val in self.tiles.items():
 			val.button.grid(row=key[0], column=key[1])
+		self.turncount = StringVar()
+		self.currentturn = StringVar()
+
+		bottom = Frame(master)
+		Entry(bottom, textvariable=self.turncount, state='disabled').grid(row=0, column=1)
+		Button(bottom, text="Start Game", bg="green", command=self.begin).grid(row=0, column=2)
+		Entry(bottom, textvariable=self.currentturn, state='disabled').grid(row=0, column=3)
+		hyperlink = Label(bottom, text="Source Code", fg="blue4", cursor="hand2")
+		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/blob/master/chess.py"))
+		hyperlink.grid(row=0,column=4, sticky=W)
+		bottom.grid(row=9, column=0, columnspan=8)
 
 	def initBoard(self):
 		for i in range(1, 9):
@@ -124,8 +143,30 @@ class Chess(Frame):
 		for i in [3, 4, 5, 6]:
 			for j in range(1, 9):
 				self.tiles[i, j].clear()
+	
+	def begin(self):
+		finished = False
+		turn = 1
+		while not finished:
+			self.turncount.set("Turn Count: " + str(turn))
+			if turn % 2 == 0:
+				self.currentturn.set("Current Turn: Black")
+			else:
+				self.currentturn.set("Current Turn: White")
+			selectable = True
+			self.wait()
+			finished = True
+			targets = self.tiles[(selected[0], selected[1])].getTargets()
+			print(targets)
+
+	def wait(self):
+		waiting = True
+		if (selected[0] is not None) and (selected[1] is not None):
+
+			self.master.after(1000, self.wait)
+
 
 program = Tk()
-program.title("YouTube-DL Basic GUI")
+program.title("Chess Py")
 app = Chess(program)
 program.mainloop()
