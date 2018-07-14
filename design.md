@@ -9,15 +9,12 @@ Normal Chess board set up.
 -King moves one space in any direction.
 -For the sake of this game, we will set aside castling, el passant, and rules that force an opponent to exit check, and the checking/enforcement of checkmate.
 
-Objective: Create a functional TKinter chess game.
-The board is represented as an 8x8 array of tile.
-Each tile is white or black.
-Each tile may or may not have a piece on it.
-Tiles should have a variable indicating the current piece on it.
+The board is represented as an 8x8 array of tiles. Tiles are made white and black.
+Each tile has the following variables:
+-Row value and column black.
+-A piece variable, which may be unfilled (if there is no piece on it).
+-A list consisting of all possible moves a certain piece can make from there.
 Each piece consists of:
 -A name (black pawn, black rook, white queen, etc)
 -An image associated with that name
 -A direction (downwards for white pieces, upwards for black)
-Each tile should have:
--A variable indicating the piece that is on it
--A 
