@@ -13,40 +13,54 @@ class Piece():
 
 class Tile():
 	def __init__(self, row, col, clickmethod):
-		self.blank = {}
-		for i in ["grey", "white", "orange"]:
-			self.blank[i] = PhotoImage(file="images/"+i+"blank.png")
 		self.row = row
 		self.col = col
-		self.pieceColor = None
+		self.piececolor = None
 		if (row + col) % 2 == 0:
 			self.color = "white"
 		else:
 			self.color = "grey"
-		self.button = Button(command=lambda:clickmethod(self.row, self.col), bg=self.color)
+		self.blank = {}
+		for i in ["grey", "white", "orange"]:
+			self.blank[i] = PhotoImage(file="images/"+i+"blank.png")
+		self.button = Button(command=lambda:clickmethod(row, col), bg=self.color)
 		self.piece = None
 		self.highlighted = False
 		self.targets = {}
 		self.genTargets()
 
 	def genTargets(self):
-		verticals = []
-		horizontals = []
-		diagonals = []
-		for i in range(1, 9):
-			if i != self.row:
-				verticals.append((i, self.col))
-			if i != self.col:
-				horizontals.append((self.row, i))
-			for j in [(self.row-i, self.col-i), (self.row-i, self.col+i),
-			(self.row+i, self.col-i), (self.row+i, self.col+i)]:
-				if self.goodTile(j[0], j[1]):
-					diagonals.append(j)
-		self.targets["rook"] = verticals + horizontals
-		self.targets["bishop"] = diagonals
-		self.targets["queen"] = verticals + horizontals + diagonals
+		for i in ["up", "down", "left", "right", "upleft", "upright", "downleft",
+		"downright", "knight", "king", "bpawn", "wpawn", "wpawnprime", "bpawnprime"]:
+			self.targets[i] = []
 
-		self.targets["knight"] = []
+		i = self.row + 1
+		while i < 9:
+			self.targets["down"].append((i, self.col))
+			i += 1
+
+		i = self.row - 1
+		while i > 0:
+			self.targets["up"].append((i, self.col))
+			i -= 1
+
+		i = self.col + 1
+		while i < 9:
+			self.targets["right"].append((self.row, i))
+			i += 1
+
+		i = self.col -1
+		while i > 0:
+			self.targets["left"].append((self.row, i))
+			i -= 1
+
+		for i in range(1, 9):
+			for pair, target in zip([(self.row - i, self.col + i), (self.row -i, self.col - i),
+			(self.row + i, self.col - i), (self.row + i, self.col + i)],
+			["upright", "upleft", "downleft", "downright"]):
+				if self.goodTile(pair[0], pair[1]):
+					self.targets[target].append(pair)
+
 		for a, b in zip([2, 2, -2, -2, 1, 1, -1, -1],
 						[1, -1, 1, -1, 2, -2, 2, -2]):
 			a = self.row + a
@@ -54,10 +68,6 @@ class Tile():
 			if self.goodTile(a, b):
 				self.targets["knight"].append((a, b))
 
-		self.targets["bpawn"] = []
-		self.targets["bpawnprime"] = []
-		self.targets["wpawn"] = []
-		self.targets["wpawnprime"] = []
 		if self.row < 8:
 			self.targets["wpawnprime"].append(((self.row+1), (self.col)))
 			self.targets["wpawn"].append(((self.row+1), (self.col)))
@@ -78,46 +88,42 @@ class Tile():
 					self.targets["king"].append((a, b))
 
 	def goodTile(self, a, b):
-		if (a < 1) or (b < 1) or (a > 8) or (b > 8) or (self.row == a and self.col == b):
-			return False
-		return True
-
-	def getTargets(self):
-		if self.piece is not None:
-			return self.targets[self.piece.kind]
+		return (9 > a > 0) and (9 > b > 0) and (self.row != a or self.col != b)
 
 	def clear(self):
 		self.piece = None
 		self.piececolor = None
 		self.button['image'] = self.blank[self.color]
 
-	def placePiece(self, newPiece):
+	def placePiece(self, newPiece, deprime=True):
 		self.piece = newPiece
-		self.piececolor = newPiece.color
+		self.piececolor = self.piece.color
 		self.button['image'] = self.piece.image
+		if deprime:
+			if "pawnprime" in self.piece.kind:
+				self.piece.kind = self.piece.kind[:-5]
 
 	def highlight(self):
 		if not self.highlighted:
 			self.highlighted = True
-			if self.piece is not None:
-				self.button['bg'] = 'orange'
-			else:
+			if self.piece is None:
 				self.button['image'] = self.blank['orange']
+			else:
+				self.button['bg'] = 'orange'
 		else:
 			self.highlighted = False
-			if self.piece is not None:
-				self.button['image'] = self.piece.image
+			if self.piece is None:
+				self.button['image'] = self.blank[self.color]
 			else:
-				self.button['bg'] = self.blank[self.color]
+				self.button['bg'] = self.color
 
 class Chess(Frame):
 	def __init__(self, master):
 		self.tiles = {}
 		for i in range(1, 9):
 			for j in range(1, 9):
-				self.tiles[(i, j)] = Tile(i, j, self.click) #reference to cal method
+				self.tiles[(i, j)] = Tile(i, j, self.click)
 				self.tiles[(i, j)].button.grid(row=i, column=j)
-
 		self.initBoard()
 		self.turn = IntVar()
 		self.turn.set(1)
@@ -137,8 +143,8 @@ class Chess(Frame):
 
 	def initBoard(self):
 		for i in range(1, 9):
-			self.tiles[2, i].placePiece(Piece("white", "wpawn"))
-			self.tiles[7, i].placePiece(Piece("black", "bpawn"))
+			self.tiles[2, i].placePiece(Piece("white", "wpawn"), deprime=False)
+			self.tiles[7, i].placePiece(Piece("black", "bpawn"), deprime=False)
 		for i in [2, 7]:
 			self.tiles[1, i].placePiece(Piece("white", "knight"))
 			self.tiles[8, i].placePiece(Piece("black", "knight"))
@@ -170,33 +176,92 @@ class Chess(Frame):
 
 	def click(self, r, c):
 		p = self.tiles[(r, c)]
+
 		if self.state == 2:
 			if p.piececolor != self.currentcolor:
 				return
-			for i in p.getTargets():
-				if self.tiles[i].piececolor != self.currentcolor:
-					self.tiles[i].highlight()
-					self.highlighted.append(i)
+			for i in self.accessible(p):
+				self.tiles[i].highlight()
+				self.highlighted.append(i)
 			if len(self.highlighted) > 0:
 				self.state = 3
 				self.source = p
+		
 		elif self.state == 3:
-			if not p.highlighted:
-				return
-			p.placePiece(self.source.piece)
-			self.source.clear()
-			self.source = None
-			self.state = 2
-			self.turn.set(self.turn.get() + 1)
-			if self.currentcolor == "white":
-				self.currentcolor = "black"
-				self.currentturn.set("Current Turn: Black")
-			else:
-				self.currentcolor = "white"
-				self.currentturn.set("Current Turn: White")
-			for i in self.highlighted:
-				self.tiles[i].highlight()
-			self.highted = []
+
+			if p.highlighted:
+				p.placePiece(self.source.piece)
+				self.source.clear()
+				self.source = None
+				self.state = 2
+				self.turn.set(self.turn.get() + 1)
+				if self.currentcolor == "white":
+					self.currentcolor = "black"
+					self.currentturn.set("Current Turn: Black")
+				else:
+					self.currentcolor = "white"
+					self.currentturn.set("Current Turn: White")
+				for i in self.highlighted:
+					self.tiles[i].highlight()
+				self.highlighted = []
+
+			elif p.piececolor == self.currentcolor:
+				for i in self.highlighted:
+					self.tiles[i].highlight()
+				self.highlighted = []
+				for i in self.accessible(p):
+					self.tiles[i].highlight()
+					self.highlighted.append(i)
+				if len(self.highlighted) > 0:
+					self.source = p
+				else:
+					self.state = 2
+
+	def accessible(self, p):
+		if p.piece.kind in "wpawn bpawn king knight": #all of these move only one space and knight jumps, so they don't need deep error checking
+			targets = []
+			for i in p.targets[p.piece.kind]:
+				if self.tiles[(i[0], i[1])].piececolor != p.piececolor:
+					targets.append(i)
+			return targets
+
+		if p.piece.kind in "wpawnprime bpawnprime":
+			targets = []
+			possible = p.targets[p.piece.kind]
+			if self.tiles[possible[0]].piececolor != p.piececolor:
+				targets.append(possible[0])
+				if (self.tiles[possible[0]].piececolor is None) and (len(possible) > 1):
+					if self.tiles[possible[1]].piececolor != p.piececolor:
+						targets.append(possible[1])
+			return targets
+		
+		up = []
+		down = []
+		left = []
+		right = []
+		upleft = []
+		upright = []
+		downleft = []
+		downright = []
+
+		for direction, categ in zip(["up", "down", "left",
+		"right", "upleft", "upright", "downleft", "downright"],
+		[up, down, left, right, upleft, upright, downleft, downright]):
+			for i in p.targets[direction]:
+				targetcolor = self.tiles[(i[0], i[1])].piececolor
+				if targetcolor == p.piececolor:
+					break
+				elif targetcolor is None:
+					categ.append(i)
+				else:
+					categ.append(i)
+					break
+		if p.piece.kind == "bishop":
+			return upleft + upright + downleft + downright
+		elif p.piece.kind == "rook":
+			return up + left + down + right
+		elif p.piece.kind == "queen":
+			return up + left + down + right + upleft + upright + downleft + downright
 
 program = Tk()
 program.title("Chess Py")
