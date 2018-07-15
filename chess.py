@@ -26,69 +26,6 @@ class Tile():
 		self.button = Button(command=lambda:clickmethod(row, col), bg=self.color)
 		self.piece = None
 		self.highlighted = False
-		self.targets = {}
-		self.genTargets()
-
-	def genTargets(self):
-		for i in ["up", "down", "left", "right", "upleft", "upright", "downleft",
-		"downright", "knight", "king", "bpawn", "wpawn", "wpawnprime", "bpawnprime"]:
-			self.targets[i] = []
-
-		i = self.row + 1
-		while i < 9:
-			self.targets["down"].append((i, self.col))
-			i += 1
-
-		i = self.row - 1
-		while i > 0:
-			self.targets["up"].append((i, self.col))
-			i -= 1
-
-		i = self.col + 1
-		while i < 9:
-			self.targets["right"].append((self.row, i))
-			i += 1
-
-		i = self.col -1
-		while i > 0:
-			self.targets["left"].append((self.row, i))
-			i -= 1
-
-		for i in range(1, 9):
-			for pair, target in zip([(self.row - i, self.col + i), (self.row -i, self.col - i),
-			(self.row + i, self.col - i), (self.row + i, self.col + i)],
-			["upright", "upleft", "downleft", "downright"]):
-				if self.goodTile(pair[0], pair[1]):
-					self.targets[target].append(pair)
-
-		for a, b in zip([2, 2, -2, -2, 1, 1, -1, -1],
-						[1, -1, 1, -1, 2, -2, 2, -2]):
-			a = self.row + a
-			b = self.col + b
-			if self.goodTile(a, b):
-				self.targets["knight"].append((a, b))
-
-		if self.row < 8:
-			self.targets["wpawnprime"].append(((self.row+1), (self.col)))
-			self.targets["wpawn"].append(((self.row+1), (self.col)))
-			if self.row < 7:
-				self.targets["wpawnprime"].append(((self.row+2), (self.col)))
-		if self.row > 1:
-			self.targets["bpawnprime"].append(((self.row-1), (self.col)))
-			self.targets["bpawn"].append(((self.row-1), (self.col)))
-			if self.row > 2:
-				self.targets["bpawnprime"].append(((self.row-2), (self.col)))
-
-		self.targets["king"] = []
-		for i in [-1, 0, 1]:
-			for j in [-1, 0, 1]:
-				a = self.row + i
-				b = self.col + j
-				if self.goodTile(a, b):
-					self.targets["king"].append((a, b))
-
-	def goodTile(self, a, b):
-		return (9 > a > 0) and (9 > b > 0) and (self.row != a or self.col != b)
 
 	def clear(self):
 		self.piece = None
@@ -120,18 +57,15 @@ class Tile():
 class Chess(Frame):
 	def __init__(self, master):
 		self.tiles = {}
-		for i in range(1, 9):
-			for j in range(1, 9):
-				self.tiles[(i, j)] = Tile(i, j, self.click)
-				self.tiles[(i, j)].button.grid(row=i, column=j)
 		self.initBoard()
+
 		self.turn = IntVar()
 		self.turn.set(1)
 		self.currentturn = StringVar()
 		self.turncount = StringVar()
 		self.state = StringVar()
-		self.source = StringVar()
-		self.dest = StringVar()
+		self.highlighted = [] #list of possible destinations
+		self.source = None
 
 		self.startbutton = Button(text="Start Game", bg="green", command=self.begin)
 		self.startbutton.grid(row=9, column=4)
@@ -142,6 +76,10 @@ class Chess(Frame):
 		hyperlink.grid(row=10,column=8, sticky=W)
 
 	def initBoard(self):
+		for i in range(1, 9):
+			for j in range(1, 9):
+				self.tiles[(i, j)] = Tile(i, j, self.click)
+				self.tiles[(i, j)].button.grid(row=i, column=j)
 		for i in range(1, 9):
 			self.tiles[2, i].placePiece(Piece("white", "wpawn"), deprime=False)
 			self.tiles[7, i].placePiece(Piece("black", "bpawn"), deprime=False)
@@ -171,8 +109,6 @@ class Chess(Frame):
 		self.currentturn.set("Current Turn: White")
 		self.currentcolor = "white"
 		self.state = 2
-		self.highlighted = [] #list of possible destinations
-		self.source = None
 
 	def click(self, r, c):
 		p = self.tiles[(r, c)]
@@ -218,50 +154,94 @@ class Chess(Frame):
 					self.state = 2
 
 	def accessible(self, p):
-		if p.piece.kind in "wpawn bpawn king knight": #all of these move only one space and knight jumps, so they don't need deep error checking
-			targets = []
-			for i in p.targets[p.piece.kind]:
-				if self.tiles[(i[0], i[1])].piececolor != p.piececolor:
-					targets.append(i)
-			return targets
-
-		if p.piece.kind in "wpawnprime bpawnprime":
-			targets = []
-			possible = p.targets[p.piece.kind]
-			if self.tiles[possible[0]].piececolor != p.piececolor:
-				targets.append(possible[0])
-				if (self.tiles[possible[0]].piececolor is None) and (len(possible) > 1):
-					if self.tiles[possible[1]].piececolor != p.piececolor:
-						targets.append(possible[1])
+		r = p.row
+		c = p.col
+		targets = []
+		if p.piece.kind == "king":
+			for i in [-1, 0, 1]:
+				for j in [-1, 0, 1]:
+					if i == 0 and j == 0:
+						continue
+					a = r +i
+					b = c + j
+					s = self.good(a, b)
+					if s > 1:
+						targets.append((a, b))
 			return targets
 		
-		up = []
-		down = []
-		left = []
-		right = []
-		upleft = []
-		upright = []
-		downleft = []
-		downright = []
+		if p.piece.kind == "knight":
+			for a, b in zip([2, 2, -2, -2, 1, 1, -1, -1],
+							[1, -1, 1, -1, 2, -2, 2, -2]):
+				a = r + a
+				b = c + b
+				s = self.good(a, b)
+				if s > 1:
+					targets.append((a, b))
+			return targets
+		
+		if "pawn" in p.piece.kind:
+			if "wp" in p.piece.kind: #white pawn
+				s = self.good(r+1, c)
+				if s > 1:
+					targets.append((r+1, c))
+				if s == 2 and "prime" in p.piece.kind:
+					if self.good(r+2, c) > 1:
+						targets.append((r+2, c))
+			else: #black pawn
+				s = self.good(r-1, c)
+				if s > 1:
+					targets.append((r-1, c))
+				if s == 2 and "prime" in p.piece.kind:
+					if self.good(r-2, c) > 1:
+						targets.append((r-2, c))
+			return targets
+		
+		if p.piece.kind in "rook queen":
+			dirs = [True, True, True, True] #up, down, left, right
+			for i in range(1, 9):
+				for pair, index in zip([(r-i, c), (r+i, c), (r, c-i), (r, c+i)],
+				[0, 1, 2, 3]):
+					if not dirs[index]:
+						continue
+					s = self.good(pair[0], pair[1])
+					if s < 2:
+						dirs[index] = False
+					elif s == 2:
+						targets.append(pair)
+					else:
+						targets.append(pair)
+						dirs[index] = False
 
-		for direction, categ in zip(["up", "down", "left",
-		"right", "upleft", "upright", "downleft", "downright"],
-		[up, down, left, right, upleft, upright, downleft, downright]):
-			for i in p.targets[direction]:
-				targetcolor = self.tiles[(i[0], i[1])].piececolor
-				if targetcolor == p.piececolor:
-					break
-				elif targetcolor is None:
-					categ.append(i)
-				else:
-					categ.append(i)
-					break
-		if p.piece.kind == "bishop":
-			return upleft + upright + downleft + downright
-		elif p.piece.kind == "rook":
-			return up + left + down + right
-		elif p.piece.kind == "queen":
-			return up + left + down + right + upleft + upright + downleft + downright
+		if p.piece.kind in "bishop queen":
+			dirs = [True, True, True, True]
+			for i in range(1, 9):
+				#upleft = lower row and column
+				#upright = lower row, raise column
+				#downleft = raise row, lower column
+				#downright = raise row and column
+				for pair, index in zip([(r-i, c-i), (r-i, c+i), (r+i, c-i), (r+i, c+i)],
+										[0, 1, 2, 3]):
+					if not dirs[index]:
+						continue
+					s = self.good(pair[0], pair[1])
+					if s < 2:
+						dirs[index] = False
+					elif s == 2:
+						targets.append(pair)
+					else:
+						targets.append(pair)
+						dirs[index] = False
+		return targets
+	
+	def good(self, r, c):
+		if not (9 > r > 0 and 9 > c > 0):
+			return 0
+		if self.tiles[(r, c)].piececolor == self.currentcolor:
+			return 1
+		elif self.tiles[(r, c)].piececolor is None:
+			return 2
+		else:
+			return 3
 
 program = Tk()
 program.title("Chess Py")
