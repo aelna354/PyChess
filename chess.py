@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import messagebox
 import webbrowser
 
 class Tile():
@@ -10,14 +11,15 @@ class Tile():
 		else:
 			self.color = "grey"
 		self.blank = {}
-		self.images = {}
 		for i in ["grey", "white", "orange"]:
 			self.blank[i] = PhotoImage(file="images/"+i+"blank.png")
+
+		self.images = {}
 		for i in ["black", "white"]:
 			for j in ["knight", "rook", "pawn", "bishop", "king", "queen"]:
 				self.images[i+j] = PhotoImage(file="images/"+i+j+".png")
 
-		self.button = Button(command=lambda:clickmethod(row, col), bg=self.color)
+		self.button = Button(command=lambda:clickmethod(self), bg=self.color)
 		self.piecekind = None
 		self.piececolor = None
 		self.highlighted = False
@@ -34,7 +36,7 @@ class Tile():
 		else:
 			self.button['image'] = self.images[color+"pawn"]
 			if deprime and ("prime" in kind):
-				self.piecekind = self.piecekind[:-5]
+				self.piecekind = kind[:-5]
 			
 	def highlight(self):
 		if not self.highlighted:
@@ -53,35 +55,47 @@ class Tile():
 class Chess(Frame):
 	def __init__(self, master):
 		self.tiles = {}
-		self.initBoard()
-
-		self.turn = IntVar()
-		self.currentturn = StringVar()
-		self.state = StringVar()
-		self.highlighted = [] #list of possible destinations
-		self.source = None
-		self.startbutton = Button(text="Start Game", bg="green", command=self.initGame)
-		self.startbutton.grid(row=9, column=4)
-		self.state = 1 #1 for not started, 2 for waiting for target piece, 3 for waiting for destination
-
-		hyperlink = Label(text="Source Code", fg="blue4", cursor="hand2")
-		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/blob/master/chess.py"))
-		hyperlink.grid(row=10,column=8, sticky=W)
-
-	def initBoard(self):
 		for i in range(1, 9):
 			for j in range(1, 9):
 				self.tiles[(i, j)] = Tile(i, j, self.click)
 				self.tiles[(i, j)].button.grid(row=i, column=j)
+		self.initBoard()
+
+		self.turn = IntVar()
+		self.turn.set(1)
+		self.currentturn = StringVar()
+		self.currentturn.set("Waiting to Start")
+		self.highlighted = []
+		self.source = None
+		self.state = 1 #1 for not playing, 2 for waiting for piece to move, 3 for waiting for destination
+
+		turnc = Frame(master)
+		Label(turnc, text="Turn Count: ", justify=LEFT).grid(row=0, column=0, sticky=W)
+		Label(turnc, textvariable=self.turn).grid(row=0, column=1, sticky=W)
+		turnc.grid(row=9, column=1, columnspan=2, sticky=W)
+
+		self.actionbutton = Button(text="Start Game", bg="green", command=self.action)
+		self.actionbutton.grid(row=9, column=4, columnspan=2, sticky=W)
+
+		Label(textvariable=self.currentturn).grid(row=9, column=7, columnspan=2, sticky=W)
+
+		hyperlink = Label(text="Source Code", fg="blue4", cursor="hand2")
+		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/"))
+		hyperlink.grid(row=10,column=7,columnspan=2, sticky=W)
+
+	def initBoard(self):
+		for i in [3, 4, 5, 6]:
+			for j in range(1, 9):
+				self.tiles[i, j].clear()
 		for i in range(1, 9):
 			self.tiles[2, i].placePiece("white", "wpawnprime", deprime=False)
 			self.tiles[7, i].placePiece("black", "bpawnprime", deprime=False)
-		for i in [2, 7]:
-			self.tiles[1, i].placePiece("white", "knight")
-			self.tiles[8, i].placePiece("black", "knight")
 		for i in [1, 8]:
 			self.tiles[1, i].placePiece("white", "rook")
 			self.tiles[8, i].placePiece("black", "rook")
+		for i in [2, 7]:
+			self.tiles[1, i].placePiece("white", "knight")
+			self.tiles[8, i].placePiece("black", "knight")
 		for i in [3, 6]:
 			self.tiles[1, i].placePiece("white", "bishop")
 			self.tiles[8, i].placePiece("black", "bishop")
@@ -89,33 +103,31 @@ class Chess(Frame):
 		self.tiles[1, 5].placePiece("white", "queen")
 		self.tiles[8, 4].placePiece("black", "king")
 		self.tiles[8, 5].placePiece("black", "queen")
-		for i in [3, 4, 5, 6]:
-			for j in range(1, 9):
-				self.tiles[i, j].clear()
 
 	def initGame(self):
-		self.startbutton['text'] = "Reset Game"
-		self.startbutton['bg'] = 'blue'
-		self.startbutton['command'] = self.reset
+		self.actionbutton['text'] = "Reset Game"
+		self.actionbutton['bg'] = 'yellow'
 		self.turn.set(1)
-		Label(text="Turn Count: ").grid(row=9, column=1, sticky=W)
-		Label(textvariable=self.turn).grid(row=9,column=2, columnspan=3, sticky=W)
-		Label(textvariable=self.currentturn).grid(row=9, column=6, columnspan=3)
 		self.currentturn.set("Current Turn: White")
 		self.currentcolor = "white"
 		self.state = 2
 
-	def reset(self):
-		print("H")
+	def action(self):
+		if self.state == 1:
+			self.initGame()
+		else:
+			if messagebox.askyesno("Restart Game?", "Are you sure you'd like to restart the game?"):
+				self.unhighlight()
+				self.initBoard()
+				self.initGame()
+				print(len(self.highlighted))
+
+	def unhighlight(self):
 		for i in self.highlighted:
 			self.tiles[i].highlight()
-		self.highlighted = []
-		self.tiles = {}
-		self.initBoard()
+		self.highlighted = []		
 
-	def click(self, r, c):
-		p = self.tiles[(r, c)]
-
+	def click(self, p):
 		if self.state == 2:
 			if p.piececolor != self.currentcolor:
 				return
@@ -127,27 +139,36 @@ class Chess(Frame):
 				self.source = p
 		
 		elif self.state == 3:
-
+			victory = False
 			if p.highlighted:
+				if p.piecekind == "king":
+					victory = True
 				p.placePiece(self.source.piececolor, self.source.piecekind)
+
 				self.source.clear()
 				self.source = None
 				self.state = 2
 				self.turn.set(self.turn.get() + 1)
+				self.unhighlight()
 				if self.currentcolor == "white":
 					self.currentcolor = "black"
 					self.currentturn.set("Current Turn: Black")
 				else:
 					self.currentcolor = "white"
 					self.currentturn.set("Current Turn: White")
-				for i in self.highlighted:
-					self.tiles[i].highlight()
-				self.highlighted = []
+
+				if (not victory) and ("pawn" in p.piecekind) and (not "prime" in p.piecekind) and (not (8 > p.row > 1)):
+					p.highlight()
+					p.placePiece(p.piececolor, self.promotePawn())
+					p.highlight()
+
+				if victory:
+					self.state = 4
+					self.currentturn.set("Winner: " + p.piececolor.capitalize())
+					messagebox.showinfo("Victory!", "The player controlling the " + p.piececolor.capitalize() + " pieces has won the game.")
 
 			elif p.piececolor == self.currentcolor:
-				for i in self.highlighted:
-					self.tiles[i].highlight()
-				self.highlighted = []
+				self.unhighlight()
 				for i in self.accessible(p):
 					self.tiles[i].highlight()
 					self.highlighted.append(i)
@@ -156,19 +177,35 @@ class Chess(Frame):
 				else:
 					self.state = 2
 
+	def promotePawn(self):
+		kind = StringVar()
+		kind.set("queen") #if popup is closed
+		popup = Toplevel()
+		popup.resizable(False, False)
+		popup.title('Promote Pawn')
+		Label(popup, text="Congratulations! You can now promote this pawn to any of the following:").grid(row=0, column=0)
+		opts = ["Queen", "Rook", "Bishop", "Knight"]
+		optsframe = Frame(popup)
+		for i in range(0, 4):
+			Button(optsframe, text=opts[i], command=lambda i=i:[kind.set(opts[i].lower()), popup.destroy()]).grid(row=0, column=i)
+		optsframe.grid(row=1, column=0)
+		popup.grab_set()
+		popup.wait_window(popup)
+		return kind.get()
+		
 	def accessible(self, p):
 		r = p.row
 		c = p.col
 		targets = []
+
 		if p.piecekind == "king":
 			for i in [-1, 0, 1]:
 				for j in [-1, 0, 1]:
 					if i == 0 and j == 0:
 						continue
-					a = r +i
+					a = r + i
 					b = c + j
-					s = self.good(a, b)
-					if s > 1:
+					if self.good(a, b) > 1:
 						targets.append((a, b))
 			return targets
 		
@@ -202,7 +239,7 @@ class Chess(Frame):
 			dirs = [True, True, True, True] #up, down, left, right
 			for i in range(1, 9):
 				for pair, index in zip([(r-i, c), (r+i, c), (r, c-i), (r, c+i)],
-				[0, 1, 2, 3]):
+									   [0, 1, 2, 3]):
 					if not dirs[index]:
 						continue
 					s = self.good(pair[0], pair[1])
@@ -215,12 +252,8 @@ class Chess(Frame):
 						dirs[index] = False
 
 		if p.piecekind in "bishop queen":
-			dirs = [True, True, True, True]
+			dirs = [True, True, True, True] #upleft, upright, downleft, downright
 			for i in range(1, 9):
-				#upleft = lower row and column
-				#upright = lower row, raise column
-				#downleft = raise row, lower column
-				#downright = raise row and column
 				for pair, index in zip([(r-i, c-i), (r-i, c+i), (r+i, c-i), (r+i, c+i)],
 										[0, 1, 2, 3]):
 					if not dirs[index]:
@@ -236,9 +269,7 @@ class Chess(Frame):
 		return targets
 	
 	def good(self, r, c):
-		if not (9 > r > 0 and 9 > c > 0):
-			return 0
-		if self.tiles[(r, c)].piececolor == self.currentcolor:
+		if not (9 > r > 0 and 9 > c > 0) or (self.tiles[(r, c)].piececolor == self.currentcolor):
 			return 1
 		elif self.tiles[(r, c)].piececolor is None:
 			return 2
