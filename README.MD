@@ -26,6 +26,6 @@ The objective of the game is to "checkmate" the opponent by removing their king 
 
 # Installation & Setup
 
-With Python 3 installed, all you have to do is download app.cmd and chess.py, and double click app.cmd to launch the game.
+Install Python 3 if it is not already installed. Aftwards, download the [latest release](https://github.com/aelna354/PyChess/blob/master/release.zip?raw=true) and extract it to any folder on your computer. With Windows, simply double click the app.cmd file to start the game; for other OSs, run "python chess.py" in the command line.
 
 Chess piece images credited to: https://commons.wikimedia.org/wiki/Category:PNG_chess_pieces/Standard_transparent
