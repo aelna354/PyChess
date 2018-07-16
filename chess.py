@@ -88,21 +88,21 @@ class Chess(Frame):
 			for j in range(1, 9):
 				self.tiles[i, j].clear()
 		for i in range(1, 9):
-			self.tiles[2, i].placePiece("white", "wpawnprime", deprime=False)
-			self.tiles[7, i].placePiece("black", "bpawnprime", deprime=False)
+			self.tiles[2, i].placePiece("black", "bpawnprime", deprime=False)
+			self.tiles[7, i].placePiece("white", "wpawnprime", deprime=False)
 		for i in [1, 8]:
-			self.tiles[1, i].placePiece("white", "rook")
-			self.tiles[8, i].placePiece("black", "rook")
+			self.tiles[1, i].placePiece("black", "rook")
+			self.tiles[8, i].placePiece("white", "rook")
 		for i in [2, 7]:
-			self.tiles[1, i].placePiece("white", "knight")
-			self.tiles[8, i].placePiece("black", "knight")
+			self.tiles[1, i].placePiece("black", "knight")
+			self.tiles[8, i].placePiece("white", "knight")
 		for i in [3, 6]:
-			self.tiles[1, i].placePiece("white", "bishop")
-			self.tiles[8, i].placePiece("black", "bishop")
-		self.tiles[1, 4].placePiece("white", "king")
-		self.tiles[1, 5].placePiece("white", "queen")
-		self.tiles[8, 4].placePiece("black", "king")
-		self.tiles[8, 5].placePiece("black", "queen")
+			self.tiles[1, i].placePiece("black", "bishop")
+			self.tiles[8, i].placePiece("white", "bishop")
+		self.tiles[1, 4].placePiece("black", "king")
+		self.tiles[1, 5].placePiece("black", "queen")
+		self.tiles[8, 4].placePiece("white", "king")
+		self.tiles[8, 5].placePiece("white", "queen")
 
 	def initGame(self):
 		self.actionbutton['text'] = "Reset Game"
@@ -219,7 +219,7 @@ class Chess(Frame):
 			return targets
 		
 		if "pawn" in p.piecekind:
-			if "wp" in p.piecekind: #white pawn
+			if "bp" in p.piecekind: #black pawn
 				s = self.good(r+1, c)
 				if s > 1:
 					targets.append((r+1, c))
