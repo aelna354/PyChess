@@ -5,7 +5,7 @@ A chess game I made in Python 3 using Tkinter. After my successes in creating bo
 ![](photo1.png?raw=true)
 ![](photo2.png?raw=true)
 
-# Rules
+## Rules
 
 No AI, only 2 player mode. Game plays on a board of 8x8 tiles. One player controls white pieces, other black pieces, white piece player goes first. Game is played in turns; during each turn, the turn player must move exactly one of their pieces.
 
@@ -24,7 +24,7 @@ The objective of the game is to "checkmate" the opponent by removing their king 
 
 (Note: normally in chess, a player is not allowed to put themselves in a position where the opponent can checkmate them. This rule is not enforced in this implementation.)
 
-# Installation & Setup
+## Installation & Setup
 
 Install Python 3 if it is not already installed. Aftwards, download the [latest release](https://github.com/aelna354/PyChess/blob/master/release.zip?raw=true) and extract it to any folder on your computer. With Windows, simply double click the app.cmd file to start the game; for other OSs, run "python chess.py" in the command line.
 
