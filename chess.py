@@ -1,16 +1,26 @@
+#2-player mode only Chess game implementation by aelna354. Coded in Python and Tkinter in July 2018.
+#Source code: https://github.com/aelna354/PyChess/
+#Major chess features missing include en passant, castling, and a system that determines "check".
+#Victory in this game isn't done by putting the other person in checkmate, but rather by capturing their king.
 from tkinter import *
 from tkinter import messagebox
 import webbrowser
 
-#Class for managing an individual board tile, including the piece that may be on it..
+#Class for managing an individual board tile, including the piece that may be on it.
 class Tile():
 	def __init__(self, row, col, clickmethod): #Creates tile.
 		self.row = row
 		self.col = col
+		self.piecekind = None
+		self.piececolor = None
+		self.highlighted = False
+		self.sourcemark = False
+
 		if (row + col) % 2 == 0:
 			self.color = "white"
 		else:
 			self.color = "grey"
+
 		self.blank = {}
 		for i in ["grey", "white", "orange"]:
 			self.blank[i] = PhotoImage(file="images/"+i+"blank.png")
@@ -21,10 +31,6 @@ class Tile():
 				self.images[i+j] = PhotoImage(file="images/"+i+j+".png")
 
 		self.button = Button(command=lambda:clickmethod(self), bg=self.color)
-		self.piecekind = None
-		self.piececolor = None
-		self.highlighted = False
-		self.sourcemark = False
 
 	def clear(self): #Used to mark the tile as unoccupied.
 		self.piecekind = None
@@ -34,13 +40,14 @@ class Tile():
 	def placePiece(self, color, kind, deprime=True): #Places a piece on the tile.
 		self.piececolor = color
 		self.piecekind = kind
+
 		if "pawn" not in kind: self.button['image'] = self.images[color+kind]
 		else:
 			self.button['image'] = self.images[color+"pawn"]
 			if deprime and ("prime" in kind):
 				self.piecekind = kind[:-5]
 			
-	def highlight(self): #Marks the tile as one of the possible destinations for a piece about to be moved.
+	def highlight(self): #Marks tile as a possible destination.
 		if not self.highlighted:
 			self.highlighted = True
 			self.button['bg'] = 'orange'
@@ -52,7 +59,7 @@ class Tile():
 			if self.piecekind is None:
 				self.button['image'] = self.blank[self.color]
 
-	def sourcelight(self): #Marks the tile as the piece about to be moved, or a pawn about to be promoted.
+	def sourcelight(self): #Marks tile as piece about to be moved, or pawn about to be promoted.
 		if not self.sourcemark:
 			self.sourcemark = True
 			self.button['bg'] = 'blue'
@@ -61,21 +68,21 @@ class Tile():
 			self.button['bg'] = self.color
 
 class Chess(Frame): #Manages the game/chessboard.
-	def __init__(self, master): #Creates the tiles and GUI.
+	def __init__(self, master): #Creates tiles and GUI.
 		self.tiles = {}
 		for i in range(1, 9):
 			for j in range(1, 9):
 				self.tiles[(i, j)] = Tile(i, j, self.click)
 				self.tiles[(i, j)].button.grid(row=i, column=j)
-		self.initBoard()
 
-		self.turn = IntVar()
-		self.turn.set(1)
-		self.currentturn = StringVar()
-		self.currentturn.set("Waiting to Start")
 		self.highlighted = []
 		self.source = None
 		self.state = 1 #1 = game hasn't started. 2 = waiting for piece to move to be picked. 3 = waiting for destination tile. 4 = game has ended.
+		self.turn = IntVar()
+		self.turn.set(1)
+
+		self.currentturn = StringVar()
+		self.currentturn.set("Waiting to Start")
 
 		turnc = Frame(master)
 		Label(turnc, text="Turn Count: ", justify=LEFT).grid(row=0, column=0, sticky=W)
@@ -90,6 +97,8 @@ class Chess(Frame): #Manages the game/chessboard.
 		hyperlink = Label(text="Source Code", fg="blue4", cursor="hand2")
 		hyperlink.bind("<Button-1>", lambda x: webbrowser.open_new(r"https://github.com/aelna354/PyChess/"))
 		hyperlink.grid(row=10,column=7,columnspan=2, sticky=W)
+
+		self.initBoard()
 
 	def initBoard(self): #Creates/resets the board.
 		for i in [3, 4, 5, 6]:
@@ -113,8 +122,6 @@ class Chess(Frame): #Manages the game/chessboard.
 		self.tiles[8, 5].placePiece("white", "queen")
 
 	def initGame(self): #Starts/reset the game.
-		self.actionbutton['text'] = "Reset Game"
-		self.actionbutton['bg'] = 'yellow'
 		self.turn.set(1)
 		self.currentturn.set("Current Turn: White")
 		self.currentcolor = "white"
@@ -122,6 +129,8 @@ class Chess(Frame): #Manages the game/chessboard.
 
 	def action(self): #The "Start Game"/"Restart Game" button.
 		if self.state == 1:
+			self.actionbutton['text'] = "Reset Game"
+			self.actionbutton['bg'] = 'yellow'
 			self.initGame()
 		else:
 			if messagebox.askyesno("Restart Game?", "Are you sure you'd like to restart the game?"):
@@ -135,9 +144,7 @@ class Chess(Frame): #Manages the game/chessboard.
 		self.highlighted = []		
 
 	def click(self, p): #Event that occurs when a tile is clicked on.
-		if self.state == 2:
-			if p.piececolor != self.currentcolor:
-				return
+		if self.state == 2 and p.piececolor == self.currentcolor:
 			for i in self.accessible(p):
 				self.tiles[i].highlight()
 				self.highlighted.append(i)
@@ -148,12 +155,12 @@ class Chess(Frame): #Manages the game/chessboard.
 		
 		elif self.state == 3:
 			if p.highlighted:
-				self.source.sourcelight()
 				victory = False
 				if p.piecekind == "king":
 					victory = True
-				p.placePiece(self.source.piececolor, self.source.piecekind)
 
+				self.source.sourcelight()
+				p.placePiece(self.source.piececolor, self.source.piecekind)
 				self.source.clear()
 				self.source = None
 				self.state = 2
@@ -167,7 +174,7 @@ class Chess(Frame): #Manages the game/chessboard.
 					self.currentcolor = "white"
 					self.currentturn.set("Current Turn: White")
 
-				if (not victory) and ("pawn" in p.piecekind) and (not "prime" in p.piecekind) and (not (8 > p.row > 1)):
+				if (not victory) and ("pawn" in p.piecekind) and (not (8 > p.row > 1)):
 					p.sourcelight()
 					p.placePiece(p.piececolor, self.promotePawn())
 					p.sourcelight()
@@ -175,7 +182,7 @@ class Chess(Frame): #Manages the game/chessboard.
 				if victory:
 					self.state = 4
 					self.currentturn.set("Winner: " + p.piececolor.capitalize())
-					messagebox.showinfo("Victory!", "Congratulations to the player controlling the " + p.piececolor.capitalize() + " pieces, they have won the game.")
+					messagebox.showinfo("Victory!", "Congratulations! The player controlling the " + p.piececolor.capitalize() + " pieces has won the game.")
 
 			elif p.piececolor == self.currentcolor:
 				self.unhighlight()
@@ -218,7 +225,7 @@ class Chess(Frame): #Manages the game/chessboard.
 						continue
 					a = r + i
 					b = c + j
-					if self.good(a, b) > 1:
+					if self.good(a, b) != 1:
 						targets.append((a, b))
 			return targets
 		
@@ -227,42 +234,37 @@ class Chess(Frame): #Manages the game/chessboard.
 							[1, -1, 1, -1, 2, -2, 2, -2]):
 				a = r + a
 				b = c + b
-				if self.good(a, b) > 1:
+				if self.good(a, b) != 1:
 					targets.append((a, b))
 			return targets
 		
 		if "pawn" in p.piecekind:
 			if "bp" in p.piecekind: #black pawn
 				s = self.good(r+1, c)
-				if s > 1:
+				if s != 1:
 					targets.append((r+1, c))
-				if s == 2 and "prime" in p.piecekind:
-					if self.good(r+2, c) > 1:
-						targets.append((r+2, c))
+				if s == 2 and "prime" in p.piecekind and (self.good(r+2, c) != 1):
+					targets.append((r+2, c))
 			else: #white pawn
 				s = self.good(r-1, c)
-				if s > 1:
+				if s != 1:
 					targets.append((r-1, c))
-				if s == 2 and "prime" in p.piecekind:
-					if self.good(r-2, c) > 1:
-						targets.append((r-2, c))
+				if s == 2 and "prime" in p.piecekind and (self.good(r-2, c) != 1):
+					targets.append((r-2, c))
 			return targets
 		
 		if p.piecekind in "rook queen":
 			dirs = [True, True, True, True] #up, down, left, right
 			for i in range(1, 9):
 				#up is lower row. down is raise row. left is lower column. right is raise column.
-				#The idea here is that we are going through each direction sequentially; the first upwards, then second upwards, etc.
-				#Therefore, we can mark when we encounter an obstruction that we can't jump over, we mark that index as false.
+				#The idea here is that we are going through each direction sequentially; 1 tile above, then 2 tiles above, then 3 tiles above, etc..
+				#Therefore, when we encounter something we can't jump over, we can mark the index correlating to that direction as false so we know to ignore any future tiles in that direction.
 				for pair, index in zip([(r-i, c), (r+i, c), (r, c-i), (r, c+i)],
 									   [0, 1, 2, 3]):
-					if not dirs[index]:
-						continue
+					if not dirs[index]: continue
 					s = self.good(pair[0], pair[1])
-					if s < 2:
-						dirs[index] = False
-					elif s == 2:
-						targets.append(pair)
+					if s == 1: dirs[index] = False
+					elif s == 2: targets.append(pair)
 					else:
 						targets.append(pair)
 						dirs[index] = False
@@ -274,13 +276,10 @@ class Chess(Frame): #Manages the game/chessboard.
 				#downleft is raise row, lower column. downright is raise row and column.
 				for pair, index in zip([(r-i, c-i), (r-i, c+i), (r+i, c-i), (r+i, c+i)],
 										[0, 1, 2, 3]):
-					if not dirs[index]:
-						continue
+					if not dirs[index]: continue
 					s = self.good(pair[0], pair[1])
-					if s < 2:
-						dirs[index] = False
-					elif s == 2:
-						targets.append(pair)
+					if s == 1: dirs[index] = False
+					elif s == 2: targets.append(pair)
 					else:
 						targets.append(pair)
 						dirs[index] = False
@@ -300,5 +299,6 @@ class Chess(Frame): #Manages the game/chessboard.
 
 program = Tk()
 program.title("Chess Py")
+program.resizable(False, False)
 app = Chess(program)
 program.mainloop()
